@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+const (
+	SuccessCode = 0
+	FailedCode = 1
+)
+
 type ExecTask struct {
 	Command string
 	Args    []string
