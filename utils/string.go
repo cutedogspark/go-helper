@@ -61,3 +61,12 @@ func StructToMap(data interface{}) (map[string]interface{}, error) {
 	}
 	return mapData, nil
 }
+
+func SliceStrRemove(s []string, r string) []string {
+	for i, v := range s {
+		if v == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
