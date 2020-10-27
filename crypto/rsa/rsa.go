@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -50,6 +49,19 @@ func (c *Rsa) LoadFromKeyFiles(priKeyPath, pubKeyPath string) (*Rsa, error) {
 	return c, nil
 }
 
+func (c *Rsa) LoadFromBase64(priKey, pubKey string) (*Rsa, error) {
+	var err error
+	c.rsaPrivateKey, err = loadPrivateKeyBase64(priKey)
+	if err != nil {
+		return nil, err
+	}
+	c.rsaPublicKey, err = loadPublicKeyBase64(pubKey)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 func (c *Rsa) LoadFromPrivateKeyFile(priKeyPath string) (*Rsa, error) {
 	var err error
 	c.rsaPrivateKey, err = loadPrivateKeyFile(priKeyPath)
@@ -69,30 +81,20 @@ func (c *Rsa) LoadFromPublicKeyFile(pubKeyPath string) (*Rsa, error) {
 }
 
 func (c *Rsa) LoadFromPrivateKeyBase64(base64key string) (*Rsa, error) {
-	keyBytes, err := base64.StdEncoding.DecodeString(base64key)
+	var err error
+	c.rsaPrivateKey, err = loadPrivateKeyBase64(base64key)
 	if err != nil {
-		return nil, fmt.Errorf("base64 decode failed, error=%s\n", err.Error())
+		return nil, err
 	}
-
-	privateKey, err := x509.ParsePKCS1PrivateKey(keyBytes)
-	if err != nil {
-		return nil, errors.New("parse private key error")
-	}
-	c.rsaPrivateKey = privateKey
 	return c, nil
 }
 
 func (c *Rsa) LoadPublicKeyBase64(base64key string) (*Rsa, error) {
-	keyBytes, err := base64.StdEncoding.DecodeString(base64key)
-	if err != nil {
-		return nil, fmt.Errorf("base64 decode failed, error=%s\n", err.Error())
-	}
-
-	pubKeyInterface, err := x509.ParsePKIXPublicKey(keyBytes)
+	var err error
+	c.rsaPublicKey, err = loadPublicKeyBase64(base64key)
 	if err != nil {
 		return nil, err
 	}
-	c.rsaPublicKey = pubKeyInterface.(*rsa.PublicKey)
 	return c, nil
 }
 
@@ -266,6 +268,39 @@ func loadPublicKeyFile(keyfile string) (*rsa.PublicKey, error) {
 		return nil, err
 	}
 
+	pk := pbk.(*rsa.PublicKey)
+	return pk, nil
+}
+
+func loadPrivateKeyBase64(base64key string) (*rsa.PrivateKey, error) {
+	keyBytes, err := base64.StdEncoding.DecodeString(base64key)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(keyBytes)
+	if block == nil {
+		return nil, errors.New("private key error")
+	}
+	pk, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, errors.New("parse private key error")
+	}
+	return pk, nil
+}
+
+func loadPublicKeyBase64(base64key string) (*rsa.PublicKey, error) {
+	keyBytes, err := base64.StdEncoding.DecodeString(base64key)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(keyBytes)
+	if block == nil {
+		return nil, errors.New("public key error")
+	}
+	pbk, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
 	pk := pbk.(*rsa.PublicKey)
 	return pk, nil
 }
